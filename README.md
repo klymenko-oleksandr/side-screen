@@ -52,7 +52,7 @@ The agent runs `node dist/apps/api/main.js` from this folder, restarts it if it 
 3. Open the Side Screen app, drag its window to the HP display, and size it to the full width (1200 px) at the top of the screen.
 4. Right-click its Dock icon → **Options → Assign To → This Desktop** (on the HP display's desktop).
 
-**Window height.** The PRD's phase 1 split is about 1280 px for the dashboard, with the Reminders widgets below. At 1280 px every section fits, with 2–3 log lines. At about **1440 px** the log tail shows its full 6 lines and about 480 px is left for the widgets. The layout adjusts to any height, so pick whatever leaves room for your `Now` and `Next` widgets.
+**Window height.** At about **1440 px** everything fits on the HP with no scrolling and about 480 px is left for the Reminders widgets. Shorter windows (e.g. 1280 px) scroll. In landscape windows, such as the MacBook screen during a cut, the layout switches to a denser 70% scale; narrow windows stack the cards.
 
 ## Configuration (PRD S1)
 

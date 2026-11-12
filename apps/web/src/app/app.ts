@@ -32,7 +32,7 @@ import { FocusCard } from './today/focus-card';
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <main class="flex h-dvh flex-col gap-12 overflow-hidden p-22">
+    <main class="flex min-h-dvh flex-col gap-12 p-22">
       <ss-header [header]="store.header()" [now]="now()" [timeZone]="tz()" />
       <ss-power-card
         [power]="store.power()"
@@ -40,7 +40,7 @@ import { FocusCard } from './today/focus-card';
         [timeZone]="tz()"
         (refresh)="store.refreshPower()"
       />
-      <div class="flex gap-12">
+      <div class="flex gap-12 max-[800px]:flex-col">
         <ss-agenda-card
           class="min-w-0 flex-3"
           [today]="store.today()"

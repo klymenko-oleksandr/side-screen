@@ -36,7 +36,7 @@ const CI: Record<CiState, { text: string; color: string }> = {
       <span class="section-label">Deploys &amp; PRs</span>
       <ss-freshness [meta]="dev()?.meta" [timeZone]="timeZone()" />
     </div>
-    <div class="grid grid-cols-2 gap-6">
+    <div class="grid grid-cols-2 gap-6 max-[640px]:grid-cols-1">
       @for (d of deploys(); track d.name) {
         <div
           class="flex justify-between rounded-chip bg-bg px-10 py-7"

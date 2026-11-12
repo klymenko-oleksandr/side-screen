@@ -20,7 +20,7 @@ const LEVEL: Record<LogLevel, { tag: string; color: string }> = {
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     class:
-      'flex min-h-88 flex-col gap-4 overflow-hidden rounded-card border border-line bg-sunken px-14 py-12 font-mono text-log',
+      'flex flex-col gap-4 overflow-hidden rounded-card border border-line bg-sunken px-14 py-12 font-mono text-log',
   },
   template: `
     <div class="mb-4 flex justify-between font-sans section-label">
@@ -31,9 +31,7 @@ const LEVEL: Record<LogLevel, { tag: string; color: string }> = {
         <span class="text-warn">reconnecting</span>
       }
     </div>
-    <div
-      class="fade-top flex min-h-0 flex-1 flex-col justify-end overflow-hidden"
-    >
+    <div class="flex flex-1 flex-col justify-end">
       @for (line of visible(); track line.id) {
         <div class="shrink-0 truncate" data-testid="log-line">
           <span class="text-dim">{{ line.time }}</span>

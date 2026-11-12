@@ -48,7 +48,7 @@ interface StripCell {
   host: { class: 'card flex flex-col gap-10' },
   template: `
     @if (power(); as p) {
-      <div class="flex gap-10">
+      <div class="flex gap-10 max-[800px]:flex-col">
         <div class="flex flex-1 flex-col gap-2">
           <div class="flex items-center gap-6 text-meta text-muted">
             <span class="size-8 rounded-full" [class]="dotClass()"></span>
@@ -134,7 +134,7 @@ interface StripCell {
       </div>
 
       <div
-        class="flex justify-between text-meta text-muted"
+        class="flex flex-wrap justify-between gap-x-20 gap-y-4 text-meta text-muted"
         data-testid="devices"
       >
         <span

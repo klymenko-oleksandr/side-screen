@@ -53,12 +53,32 @@
   --radius-cell: 4px;
 }
 
+/*
+ * Landscape windows (the MacBook screen during a cut, when the HP is dark): same layout,
+ * 70% density, so most of it fits without scrolling. The portrait HP keeps full size.
+ */
+@media (orientation: landscape) {
+  :root {
+    --spacing: 1.4px;
+    --text-label: 15px;
+    --text-meta: 17px;
+    --text-body: 18px;
+    --text-log: 16px;
+    --text-figure: 34px;
+    --text-display: 36px;
+    --radius-card: 20px;
+    --radius-tile: 14px;
+    --radius-chip: 8px;
+    --radius-cell: 3px;
+  }
+}
+
 @layer base {
   html,
   body {
-    height: 100%;
+    min-height: 100%;
     margin: 0;
-    overflow: hidden;
+    overflow-x: hidden;
     background: var(--color-bg);
     color: var(--color-ink);
     font-family: var(--font-sans);
@@ -83,13 +103,4 @@
   font-weight: 600;
   text-transform: uppercase;
   color: var(--color-muted);
-}
-
-/* Lets the oldest log line fade out instead of being cut mid-glyph. */
-@utility fade-top {
-  mask-image: linear-gradient(
-    to bottom,
-    transparent 0,
-    #000 calc(var(--spacing) * 10)
-  );
 }
