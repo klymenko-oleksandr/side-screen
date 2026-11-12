@@ -62,3 +62,6 @@ config/side-screen.config.json
 .env
 .env.*
 !.env.example
+
+# Local database (power event log, schedule snapshots)
+data/

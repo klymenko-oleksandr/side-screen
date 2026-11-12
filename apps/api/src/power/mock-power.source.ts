@@ -77,6 +77,16 @@ export class MockPowerSource extends PowerSource {
         },
       },
       weekOffHours: 41,
+      outage:
+        isOff && nextCut
+          ? {
+              reason: 'Планове відключення (mock)',
+              start: nextCut.start,
+              end: nextCut.end,
+            }
+          : null,
+      score: isOff ? -5 : 4,
+      notice: null,
     };
   }
 }

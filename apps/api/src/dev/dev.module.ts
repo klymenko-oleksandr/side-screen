@@ -1,15 +1,13 @@
 import { Controller, Get, Inject, Injectable, Module } from '@nestjs/common';
 import { SIDE_SCREEN_CONFIG } from '../config/config.module';
 import type { SideScreenConfig } from '../config/config.schema';
-import {
-  type ModuleData,
-  SnapshotService,
-  SnapshotSource,
-} from '../snapshot/snapshot';
+import { type ModuleData, SnapshotService } from '../snapshot/snapshot';
 import { StreamService } from '../stream/stream.service';
 
-/** DI token: Vercel / Render deploys (D1), Supabase health (D2), GitHub PRs and CI (D3). */
-export abstract class DevSource extends SnapshotSource<'dev'> {}
+import { DevSource } from './dev.source';
+import { RealDevSource } from './real-dev.source';
+
+export { DevSource };
 
 const BUILD_CYCLE_MS = 2 * 60_000;
 
@@ -69,6 +67,7 @@ export class MockDevSource extends DevSource {
       ],
       // D5 (Claude Code progress) is a later phase; the card renders a session once one is reported.
       session: null,
+      notices: [],
     };
   }
 }
@@ -89,13 +88,16 @@ export class DevService extends SnapshotService<'dev'> {
 
   protected override summarize(data: ModuleData<'dev'>): string {
     const notReady = data.deploys.filter(
-      (d) => d.state !== 'ready' && d.state !== 'healthy',
+      (d) => !['ready', 'healthy', 'paused'].includes(d.state),
     );
     const deploys = notReady.length
       ? notReady.map((d) => `${d.name} ${d.state}`).join(', ')
-      : 'all deploys ready';
+      : data.deploys.length
+        ? 'all deploys ready'
+        : 'no deploys';
     const failing = data.pullRequests.filter((p) => p.ci === 'fail').length;
-    return `${deploys} · ${data.pullRequests.length} open PRs, ${failing} failing CI`;
+    const notices = data.notices.length ? ` · ${data.notices.join('; ')}` : '';
+    return `${deploys} · ${data.pullRequests.length} open PRs, ${failing} failing CI${notices}`;
   }
 }
 
@@ -111,6 +113,19 @@ export class DevController {
 
 @Module({
   controllers: [DevController],
-  providers: [DevService, { provide: DevSource, useClass: MockDevSource }],
+  providers: [
+    DevService,
+    MockDevSource,
+    RealDevSource,
+    {
+      provide: DevSource,
+      useFactory: (
+        config: SideScreenConfig,
+        real: RealDevSource,
+        mock: MockDevSource,
+      ) => (config.mock ? mock : real),
+      inject: [SIDE_SCREEN_CONFIG, RealDevSource, MockDevSource],
+    },
+  ],
 })
 export class DevModule {}

@@ -40,8 +40,9 @@ describe('Side Screen API', () => {
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
       imports: [
-        AppModule.forRoot(parseConfig({ ui: { logLines: 4 } }), {
+        AppModule.forRoot(parseConfig({ mock: true, ui: { logLines: 4 } }), {
           serveWeb: false,
+          storagePath: ':memory:',
         }),
       ],
     }).compile();

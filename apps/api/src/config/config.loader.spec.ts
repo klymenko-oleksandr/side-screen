@@ -10,7 +10,8 @@ describe('config', () => {
     expect(config.ui.showFooter).toBe(false);
     expect(config.power.weights.dtekLiveOutage).toBe(3);
     expect(config.polling.dtekScheduleHours).toBe(6);
-    expect(config.mock).toBe(true);
+    expect(config.mock).toBe(false);
+    expect(config.storage.path).toBe('data/side-screen.db');
   });
 
   it('refuses a non-loopback host', () => {

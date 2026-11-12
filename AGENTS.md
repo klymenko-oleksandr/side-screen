@@ -3,7 +3,7 @@
 Local dashboard for a portrait side monitor. Read `README.md` for the architecture; the PRD is linked there.
 
 - `apps/web`: Angular 22, standalone + signals + zoneless, Tailwind v4. One presentational component per dashboard module; state in `core/dashboard-store.ts`.
-- `apps/api`: NestJS 11. One module per dashboard module; each has an abstract `…Source` DI token and a `SnapshotService` subclass. Phase 1 binds mock sources.
+- `apps/api`: NestJS 11. One module per dashboard module; each has an abstract `…Source` DI token and a `SnapshotService` subclass, bound to a real or mock source by `config.mock`. Power status comes from signal providers + the aggregator in `apps/api/src/power`.
 - `libs/shared`: types and schedule helpers shared by both. Import as `@side-screen/shared`.
 - Tailwind spacing is 2px per step (`--spacing: 2px`), so artboard numbers map 1:1: `p-22` is the artboard's 22.
 - The server listens on loopback only and never sends secrets to the browser.

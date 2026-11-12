@@ -5,7 +5,7 @@
   "license": "UNLICENSED",
   "private": true,
   "engines": {
-    "node": ">=22.12"
+    "node": ">=22.13"
   },
   "scripts": {
     "dev": "nx serve web",
@@ -18,7 +18,8 @@
     "launchd:install": "bash tools/launchd/install.sh",
     "launchd:uninstall": "bash tools/launchd/uninstall.sh",
     "launchd:restart": "launchctl kickstart -k gui/$(id -u)/com.klymenko.side-screen",
-    "launchd:logs": "tail -f ~/Library/Logs/side-screen/server.log ~/Library/Logs/side-screen/server.err.log"
+    "launchd:logs": "tail -f ~/Library/Logs/side-screen/server.log ~/Library/Logs/side-screen/server.err.log",
+    "power:check": "node -e \"fetch('http://127.0.0.1:4300/api/power/debug').then(r=>r.json()).then(d=>console.log(JSON.stringify(d,null,2))).catch(e=>console.error('Server not reachable on 127.0.0.1:4300:',e.cause?.code??e.message))\""
   },
   "dependencies": {
     "@angular-devkit/build-angular": "~22.2.0",
@@ -35,6 +36,7 @@
     "@nestjs/platform-express": "^11.0.0",
     "@nestjs/serve-static": "^5.0.5",
     "@tailwindcss/postcss": "^4.3.5",
+    "node-ical": "^0.27.6",
     "postcss": "^8.5.32",
     "reflect-metadata": "^0.2.0",
     "rxjs": "~7.8.0",

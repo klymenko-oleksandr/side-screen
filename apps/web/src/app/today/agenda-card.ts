@@ -44,6 +44,14 @@ const MAX_ROWS = 5;
         {{ today() ? 'Nothing else today' : 'Waiting for the server…' }}
       </div>
     }
+    @if (today()?.notice; as notice) {
+      <div
+        class="text-label tracking-normal text-warn-soft"
+        data-testid="agenda-notice"
+      >
+        {{ notice }}
+      </div>
+    }
   `,
 })
 export class AgendaCard {
@@ -57,10 +65,12 @@ export class AgendaCard {
     const upcoming = items
       .filter((i) => new Date(i.end).getTime() > now)
       .slice(0, MAX_ROWS);
-    const nextEventId = upcoming.find((i) => i.kind === 'event')?.id;
+    const nextEventId = upcoming.find(
+      (i) => i.kind === 'event' && !i.allDay,
+    )?.id;
     return upcoming.map((i) => ({
       ...i,
-      time: hhmm(i.start, this.timeZone()),
+      time: i.allDay ? 'day' : hhmm(i.start, this.timeZone()),
       next: i.id === nextEventId,
     }));
   });

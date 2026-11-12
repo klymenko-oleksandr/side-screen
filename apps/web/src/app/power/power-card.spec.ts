@@ -70,6 +70,37 @@ describe('PowerCard', () => {
     expect(text(el, 'devices')).toBe('MacBook 87% Net offline Week off 41 h');
   });
 
+  it("shows DTEK's reason during a reported outage, and notices", () => {
+    const el = render(
+      powerSnapshot({
+        status: 'OFF',
+        outage: {
+          reason: 'Стабілізаційне відключення',
+          start: at(12).toISOString(),
+          end: at(16).toISOString(),
+        },
+        notice: 'DTEK: timed out',
+      }),
+      at(13, 30),
+    );
+    expect(text(el, 'outage-reason')).toBe('Стабілізаційне відключення');
+    expect(text(el, 'next-cut')).toContain('back ~16:00');
+    expect(text(el, 'power-notice')).toBe('DTEK: timed out');
+  });
+
+  it('shows a dash when the battery cannot be read', () => {
+    const el = render(
+      powerSnapshot({
+        device: {
+          batteryPct: null,
+          onAc: false,
+          internet: { online: true, latencyMs: 9 },
+        },
+      }),
+    );
+    expect(text(el, 'devices')).toContain('MacBook —');
+  });
+
   it('says when no cut is scheduled', () => {
     expect(render(powerSnapshot({ nextCut: null })).textContent).toContain(
       'No cuts scheduled',

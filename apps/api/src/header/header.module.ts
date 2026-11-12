@@ -30,6 +30,23 @@ export class MockHeaderSource extends HeaderSource {
   }
 }
 
+/** Weather API not picked yet (PRD open question): the header shows the city only. */
+@Injectable()
+export class PlaceholderHeaderSource extends HeaderSource {
+  readonly label = 'header';
+  readonly mock = false;
+
+  constructor(
+    @Inject(SIDE_SCREEN_CONFIG) private readonly config: SideScreenConfig,
+  ) {
+    super();
+  }
+
+  async fetch(): Promise<ModuleData<'header'>> {
+    return { city: this.config.locale.city, weather: null };
+  }
+}
+
 @Injectable()
 export class HeaderService extends SnapshotService<'header'> {
   protected readonly module = 'header';
@@ -59,7 +76,17 @@ export class HeaderController {
   controllers: [HeaderController],
   providers: [
     HeaderService,
-    { provide: HeaderSource, useClass: MockHeaderSource },
+    MockHeaderSource,
+    PlaceholderHeaderSource,
+    {
+      provide: HeaderSource,
+      useFactory: (
+        config: SideScreenConfig,
+        real: PlaceholderHeaderSource,
+        mock: MockHeaderSource,
+      ) => (config.mock ? mock : real),
+      inject: [SIDE_SCREEN_CONFIG, PlaceholderHeaderSource, MockHeaderSource],
+    },
   ],
 })
 export class HeaderModule {}

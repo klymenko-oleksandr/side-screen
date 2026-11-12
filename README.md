@@ -5,7 +5,7 @@ A local dashboard for the portrait HP Z24u G3 beside the MacBook. It shows power
 - PRD: [Side Screen Dashboard — PRD](https://claude.ai/artifact/Rudp7dvhgV6jNeAwkYBqW9)
 - Design: "5 · Mix" artboard on the [design canvas](https://claude.ai/artifact/JawPjSKEPzpyJuGEWgBKRZ)
 
-**Status: Phase 1 (skeleton).** Every module runs on mock data that follows the clock: the status flips to OFF during the mock 12:00–16:00 cut, the countdown ticks, and tomorrow's strip appears after 18:00. Real sources start in Phase 2.
+**Status: Phase 2 + most of Phase 3.** Power, battery, internet, Week off, the calendar, deploys and PRs read real data. Weather is a placeholder and "Three things" is marked WIP until the Reminders helper (phase 5). Set `"mock": true` in the config to run everything on time-driven mock data (handy for UI work).
 
 ## Stack
 
@@ -22,7 +22,8 @@ A local dashboard for the portrait HP Z24u G3 beside the MacBook. It shows power
 
 ```bash
 pnpm install
-cp config/side-screen.config.example.json config/side-screen.config.json   # optional in phase 1
+cp config/side-screen.config.example.json config/side-screen.config.json   # set power.address
+cp .env.example .env                                                        # tokens, all optional
 pnpm dev            # UI on http://localhost:4200, API on http://127.0.0.1:4300
 ```
 
@@ -63,6 +64,32 @@ The agent runs `node dist/apps/api/main.js` from this folder, restarts it if it 
 - `server.host` must be a loopback address; the server never listens on the network (PRD N5).
 - Secrets don't go in this file. From phase 2, API tokens live in `.env` (git-ignored) or the Keychain.
 
+### Secrets (`.env`, git-ignored)
+
+| Key                              | For                  | Where to get it                                                                                                                              |
+| -------------------------------- | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GOOGLE_CALENDAR_ICS_URL`        | Today (T1)           | Google Calendar → Settings → your calendar → Integrate calendar → _Secret address in iCal format_. Private link; reset it there if it leaks. |
+| `VERCEL_TOKEN`, `VERCEL_TEAM_ID` | Deploys (D1)         | vercel.com/account/settings/tokens; team id from Team Settings                                                                               |
+| `RENDER_API_KEY`                 | Deploys (D1)         | Render → Account Settings → API Keys                                                                                                         |
+| `SUPABASE_ACCESS_TOKEN`          | Database health (D2) | supabase.com/dashboard/account/tokens                                                                                                        |
+| `GITHUB_TOKEN`                   | PRs + CI (D3)        | Fine-grained token, _Public repositories (read-only)_                                                                                        |
+
+A missing value only empties its own source and shows a note on the card. With `dev.deploys` empty, every project the tokens can see is listed (up to `dev.maxDeploys`); list them explicitly to pick and rename.
+
+## Data sources
+
+| Signal                   | Source                                                                   | Notes                                                                                                                                                   |
+| ------------------------ | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Grid status (P1)         | Weighted vote of DTEK schedule, DTEK live status and the MacBook charger | Weights, threshold and the 60 s hold live in `power` in the config. Hover the status for each source's vote; `pnpm power:check` prints the full detail. |
+| Schedule (P2, P3)        | DTEK Kyiv Grids shutdowns page for `power.address`                       | Page every 6 h, live status every 5 min, ↻ forces both. Changes are stored in SQLite; offline, the last stored schedule is shown.                       |
+| Battery, charger (P4)    | `pmset -g batt`                                                          | macOS only                                                                                                                                              |
+| Internet (P4)            | `ping` to `power.pingHost` every 15 s                                    |                                                                                                                                                         |
+| Week off (P5)            | OFF intervals in the local event log                                     | Counts from the day the server first ran                                                                                                                |
+| Calendar (T1, T2)        | Secret iCal URL + DTEK cut windows                                       | Recurring events expanded; all-day events shown as "day"                                                                                                |
+| Deploys, DB, PRs (D1–D3) | Vercel, Render, Supabase, GitHub APIs                                    | Every 60 s                                                                                                                                              |
+
+**DTEK access.** The server fetches the public page for your address, identifies itself as SideScreen, and polls gently. The site sits behind bot protection; if it ever answers with a challenge page instead of the schedule, the Power card says so, and the status falls back to the other signals and the last stored schedule. Run `pnpm power:check` to see what DTEK returned.
+
 ## How it fits together
 
 ```
@@ -73,7 +100,8 @@ Safari web app (Angular) ──EventSource──▶ /api/stream ─┐
            │             │            │           │           │
       HeaderSource  PowerSource  TodaySource  DevSource  FooterSource   ← abstract DI tokens
            │             │            │           │           │
-         mock          mock         mock        mock     word list     ← phase 1 bindings
+   placeholder   signals +    iCal +      Vercel,    word list     ← real bindings ("mock": true swaps in mocks)
+                 aggregator   DTEK cuts   Render, …
 ```
 
 - **One Nest module per dashboard module.** Each has an abstract `…Source` class as its DI token, a `SnapshotService` that polls it on the configured interval, and a `GET /api/<module>` endpoint.
@@ -82,12 +110,9 @@ Safari web app (Angular) ──EventSource──▶ /api/stream ─┐
 - **The log tail** (D4) is the server's own Nest log, copied into a ring buffer by `TailLogger`.
 - **The UI** has one presentational component per module. `DashboardStore` holds the state as signals; `Clock` ticks every second for the clock, countdown and strip marker.
 
-### Replacing a mock with a real source (phase 2 onwards)
+### Adding a power signal (P1a)
 
-1. Write a class that extends the module's source token, e.g. `class DtekPowerSource extends PowerSource { async fetch(now) { … } }`.
-2. Bind it in the module: `{ provide: PowerSource, useClass: DtekPowerSource }`.
-
-The service, endpoint, stream and UI stay as they are. For Power, phase 2 puts the aggregator (P1b) behind `PowerSource`, fed by the individual signal providers (P1a).
+Write a class implementing `PowerSignalProvider` (`apps/api/src/power/signals/signal-providers.ts`) that returns `on` / `off` / `unknown` with a weight, and add it to the `POWER_SIGNAL_PROVIDERS` list in `power.module.ts`. The aggregator and UI don't change. The HP monitor (phase 4), Telegram channels and a LAN probe go here.
 
 ## API
 
@@ -112,7 +137,7 @@ The service, endpoint, stream and UI stay as they are. For Power, phase 2 puts t
 ## Roadmap
 
 - [x] **Phase 1: Skeleton.** Nx monorepo, config file, launchd agent, Mix layout on mock data
-- [ ] **Phase 2: Power.** Signal providers and aggregator, DTEK schedule and live status, charger
-- [ ] **Phase 3: Today and Dev.** Google Calendar, deploys, Supabase, PRs, stale states from real failures
+- [x] **Phase 2: Power.** Signal providers and aggregator, DTEK schedule and live status, charger, battery, ping, Week off
+- [x] **Phase 3: Today and Dev (most).** Calendar via secret iCal URL, deploys, Supabase, PRs + CI, stale states. Not yet: Ambient, weather
 - [ ] **Phase 4: Resilience.** Hammerspoon window restore and monitor events, offline cache, battery-saving polling
 - [ ] **Phase 5: Reminders and extras.** Reminders helper, Ambient mode, word of the hour in the footer

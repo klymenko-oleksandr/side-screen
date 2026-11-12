@@ -34,17 +34,28 @@ export const configSchema = z.object({
     })
     .prefault({}),
 
-  /** Phase 1: every module is fed by mock sources. Real providers arrive from phase 2. */
-  mock: z.boolean().default(true),
+  /** true = every module uses its mock source (handy for UI work and demos). */
+  mock: z.boolean().default(false),
+
+  /** SQLite file for the power event log and schedule snapshots (PRD N4). */
+  storage: z
+    .object({
+      path: z.string().default('data/side-screen.db'),
+    })
+    .prefault({}),
 
   power: z
     .object({
+      /** Looked up on the DTEK Kyiv Grids shutdowns page; the outage group comes from it. */
       address: z
         .object({
           street: z.string().default(''),
           house: z.string().default(''),
         })
         .prefault({}),
+      dtekBaseUrl: z.url().default('https://www.dtek-kem.com.ua'),
+      /** Public host pinged for the internet status (PRD P4). */
+      pingHost: z.string().default('1.1.1.1'),
       /** A new verdict must hold this long before the status changes (PRD P1b). */
       holdSeconds: z.number().int().min(0).default(60),
       /** Reports older than this are ignored by the aggregator. */
@@ -64,9 +75,11 @@ export const configSchema = z.object({
     })
     .prefault({}),
 
+  /** The calendar's secret iCal URL is a secret: it lives in `.env` as GOOGLE_CALENDAR_ICS_URL. */
   calendar: z
     .object({
-      calendarId: z.string().default('primary'),
+      /** Hide all-day events from the Today list. */
+      hideAllDay: z.boolean().default(false),
     })
     .prefault({}),
 
@@ -77,10 +90,14 @@ export const configSchema = z.object({
           z.object({
             name: z.string(),
             provider: z.enum(['vercel', 'render', 'supabase']),
-            projectId: z.string().optional(),
+            /** Vercel project id or name, Render service id or name, Supabase project ref. Defaults to `name`. */
+            id: z.string().optional(),
           }),
         )
         .default([]),
+      /** Max deploy tiles when `deploys` is empty and everything the tokens can see is listed. */
+      maxDeploys: z.number().int().min(1).max(12).default(6),
+      maxPullRequests: z.number().int().min(1).max(10).default(4),
       /** GitHub repos as `owner/name`. */
       repos: z
         .array(z.string().regex(/^[\w.-]+\/[\w.-]+$/, 'use owner/name'))
@@ -99,6 +116,7 @@ export const configSchema = z.object({
   polling: z
     .object({
       powerSeconds: z.number().positive().default(5),
+      pingSeconds: z.number().positive().default(15),
       devSeconds: z.number().positive().default(60),
       calendarMinutes: z.number().positive().default(5),
       dtekLiveMinutes: z.number().positive().default(5),

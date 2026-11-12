@@ -2,7 +2,7 @@ import type { WithMeta } from './module-meta';
 
 export type DeployProvider = 'vercel' | 'render' | 'supabase';
 export type DeployState =
-  'ready' | 'building' | 'error' | 'healthy' | 'unknown';
+  'ready' | 'building' | 'error' | 'healthy' | 'paused' | 'unknown';
 
 export interface DeployStatus {
   name: string;
@@ -34,6 +34,8 @@ export interface DevData {
   deploys: DeployStatus[];
   pullRequests: PullRequestStatus[];
   session: AgentSession | null;
+  /** Per-source problems, e.g. "Vercel: VERCEL_TOKEN not set". Other sources still show. */
+  notices: string[];
 }
 
 export type DevSnapshot = WithMeta<DevData>;

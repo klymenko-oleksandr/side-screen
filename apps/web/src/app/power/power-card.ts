@@ -68,12 +68,17 @@ interface StripCell {
           </div>
           <div class="flex items-baseline gap-8">
             <span
-              class="text-display font-bold"
+              class="font-bold"
               [class]="statusClass()"
+              [class.text-display]="p.status !== 'UNCONFIRMED'"
+              [class.text-figure]="p.status === 'UNCONFIRMED'"
+              [title]="votes()"
               data-testid="status"
               >{{ p.status }}</span
             >
-            <span class="text-meta text-muted">since {{ since() }}</span>
+            <span class="text-meta whitespace-nowrap text-muted"
+              >since {{ since() }}</span
+            >
           </div>
         </div>
 
@@ -86,6 +91,13 @@ interface StripCell {
             <span class="font-mono text-figure font-semibold text-warn">{{
               c.countdown
             }}</span>
+            @if (c.reason) {
+              <span
+                class="truncate text-label tracking-normal text-warn-soft"
+                data-testid="outage-reason"
+                >{{ c.reason }}</span
+              >
+            }
           </div>
         } @else {
           <div
@@ -139,8 +151,9 @@ interface StripCell {
       >
         <span
           >MacBook
-          <b class="font-semibold text-ink">{{ p.device.batteryPct }}%</b
-          >{{ p.device.onAc ? ' ⚡' : '' }}</span
+          <b class="font-semibold text-ink">{{
+            p.device.batteryPct === null ? '—' : p.device.batteryPct + '%'
+          }}</b>{{ p.device.onAc ? ' ⚡' : '' }}</span
         >
         <span>
           Net
@@ -157,6 +170,14 @@ interface StripCell {
           <b class="font-semibold text-ink">{{ p.weekOffHours }} h</b></span
         >
       </div>
+      @if (p.notice) {
+        <div
+          class="truncate text-label tracking-normal text-warn-soft"
+          data-testid="power-notice"
+        >
+          {{ p.notice }}
+        </div>
+      }
     } @else {
       <div class="section-label">Power</div>
       <div class="text-meta text-muted">Waiting for the server…</div>
@@ -175,6 +196,19 @@ export class PowerCard {
   protected readonly dotClass = computed(
     () => STATUS_DOT[this.power()?.status ?? 'UNCONFIRMED'],
   );
+  /** Status tooltip: each source's vote (PRD P1e). */
+  protected readonly votes = computed(() => {
+    const p = this.power();
+    if (!p) return '';
+    const lines = p.signals.map((sig) => {
+      const w = sig.weight
+        ? ` (${sig.state === 'off' ? '−' : '+'}${sig.weight})`
+        : '';
+      return `${sig.label}: ${sig.state}${w}${sig.detail ? ` · ${sig.detail}` : ''}`;
+    });
+    return [`score ${p.score}`, ...lines].join('\n');
+  });
+
   protected readonly since = computed(() => {
     const p = this.power();
     return p ? hhmm(p.since, this.timeZone()) : '';
@@ -191,9 +225,10 @@ export class PowerCard {
     const inProgress = start <= now;
     return {
       label: inProgress
-        ? `Cut now · back at ${hhmm(window.end, tz)}`
+        ? `Cut now · back ${this.power()?.outage ? '~' : 'at '}${hhmm(window.end, tz)}`
         : `Next cut ${hhmm(window.start, tz)} – ${hhmm(window.end, tz)}`,
       countdown: formatCountdown((inProgress ? end : start) - now),
+      reason: inProgress ? (this.power()?.outage?.reason ?? null) : null,
     };
   });
 

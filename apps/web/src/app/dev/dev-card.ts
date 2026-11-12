@@ -15,6 +15,7 @@ const DEPLOY: Record<
   healthy: { glyph: '●', text: 'ok', color: 'text-ok' },
   building: { glyph: '◐', text: 'build', color: 'text-warn' },
   error: { glyph: '✕', text: 'error', color: 'text-bad' },
+  paused: { glyph: '◌', text: 'paused', color: 'text-muted' },
   unknown: { glyph: '○', text: '—', color: 'text-muted' },
 };
 
@@ -53,6 +54,16 @@ const CI: Record<CiState, { text: string; color: string }> = {
         <span class="shrink-0" [class]="pr.color">{{ pr.text }}</span>
       </div>
     }
+    @if (
+      dev() &&
+      deploys().length === 0 &&
+      prs().length === 0 &&
+      !dev()?.notices?.length
+    ) {
+      <div class="font-sans text-muted">
+        Nothing to watch yet: add tokens to .env and repos to the config
+      </div>
+    }
     @if (dev()?.session; as s) {
       <div class="flex justify-between gap-10">
         <span class="truncate">Claude Code · {{ s.title }}</span>
@@ -61,6 +72,14 @@ const CI: Record<CiState, { text: string; color: string }> = {
         } @else {
           <span class="shrink-0 text-muted">{{ s.done }}/{{ s.total }}</span>
         }
+      </div>
+    }
+    @for (notice of dev()?.notices ?? []; track notice) {
+      <div
+        class="truncate font-sans text-label tracking-normal text-warn-soft"
+        data-testid="dev-notice"
+      >
+        {{ notice }}
       </div>
     }
   `,

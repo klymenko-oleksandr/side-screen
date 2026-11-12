@@ -8,6 +8,7 @@ import { DevModule } from '../dev/dev.module';
 import { FooterModule } from '../footer/footer.module';
 import { HeaderModule } from '../header/header.module';
 import { PowerModule } from '../power/power.module';
+import { StorageModule } from '../storage/storage';
 import { StreamModule } from '../stream/stream.module';
 import { SystemController } from '../system/system.controller';
 import { TodayModule } from '../today/today.module';
@@ -21,7 +22,7 @@ export function webDir(cwd = process.cwd(), env = process.env): string {
 export class AppModule {
   static forRoot(
     config: SideScreenConfig,
-    opts: { serveWeb?: boolean } = {},
+    opts: { serveWeb?: boolean; storagePath?: string } = {},
   ): DynamicModule {
     const root = webDir();
     // Always mount the UI, even before it's built: files are read per request, so a
@@ -37,6 +38,7 @@ export class AppModule {
       module: AppModule,
       imports: [
         ConfigModule.forRoot(config),
+        StorageModule.forRoot(opts.storagePath ?? config.storage.path),
         StreamModule,
         HeaderModule,
         PowerModule,

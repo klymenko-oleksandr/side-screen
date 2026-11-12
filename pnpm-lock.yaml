@@ -49,6 +49,9 @@ importers:
       '@tailwindcss/postcss':
         specifier: ^4.3.5
         version: 4.3.5
+      node-ical:
+        specifier: ^0.27.6
+        version: 0.27.6
       postcss:
         specifier: ^8.5.32
         version: 8.5.32
@@ -10794,6 +10797,13 @@ packages:
       }
     hasBin: true
 
+  node-ical@0.27.6:
+    resolution:
+      {
+        integrity: sha512-wtZkvE2Hbldw8tqu07a5INybNlP4TbjCLRjxse6FKmMpuhq9V9vNNFCJZ8SlU2rJ98uSGQ+pIdtqvECzPqb5Nw==,
+      }
+    engines: { node: '>=22' }
+
   node-int64@0.4.0:
     resolution:
       {
@@ -12007,6 +12017,12 @@ packages:
       }
     engines: { node: '>= 18' }
 
+  rrule-temporal@2.2.8:
+    resolution:
+      {
+        integrity: sha512-+wWUe0J02oMh1UWKIt1RTu2H0Cz+gP11O/iweK0MN2UP6JLGeepTUkbSBa90Hxq0W+ywSxM9IlJNouIUdMOwhg==,
+      }
+
   rrweb-cssom@0.6.0:
     resolution:
       {
@@ -12838,6 +12854,24 @@ packages:
     resolution:
       {
         integrity: sha512-4CEQ3qRJYo+mtEbJ+OoQu3dF4TDkwaO3RDVC4UzP5cpAOIUWwuwPjD7sdxDFFqsMUjsXVVYBMlg/boAaloThMA==,
+      }
+
+  temporal-polyfill@1.0.8:
+    resolution:
+      {
+        integrity: sha512-RCCGa0GddT099XG49ijdD0tDf86L8vfuZun1+JyJiO4Y2NP9PACQsG0OnvNPXwVLisdvhr/zqL2nhKQmXXx08A==,
+      }
+
+  temporal-spec@1.0.1:
+    resolution:
+      {
+        integrity: sha512-wxVoanmDeavXie1vu2JaQ3WIc3JZnWAOYFBsJyATaVsXsycKYUflGsyBmrRSnoCpZJpwPyr38VpgSUlQ8CbFxg==,
+      }
+
+  temporal-utils@1.0.4:
+    resolution:
+      {
+        integrity: sha512-4mAcgbWlaxe+gn23gk8g0iHxCVGVOhKzSCfF5HM3lfvH8BdT+/pBmH/R/E4CrIse+koUgs8ThkPzCLnui6Fi8w==,
       }
 
   terser-webpack-plugin@5.6.1:
@@ -21625,6 +21659,11 @@ snapshots:
       detect-libc: 2.1.2
     optional: true
 
+  node-ical@0.27.6:
+    dependencies:
+      rrule-temporal: 2.2.8
+      temporal-polyfill: 1.0.8
+
   node-int64@0.4.0: {}
 
   node-releases@2.0.63: {}
@@ -22523,6 +22562,10 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  rrule-temporal@2.2.8:
+    dependencies:
+      temporal-spec: 1.0.1
+
   rrweb-cssom@0.6.0: {}
 
   run-applescript@7.1.0: {}
@@ -23047,6 +23090,15 @@ snapshots:
       is2: 2.0.1
     transitivePeerDependencies:
       - supports-color
+
+  temporal-polyfill@1.0.8:
+    dependencies:
+      temporal-spec: 1.0.1
+      temporal-utils: 1.0.4
+
+  temporal-spec@1.0.1: {}
+
+  temporal-utils@1.0.4: {}
 
   terser-webpack-plugin@5.6.1(@swc/core@1.15.8(@swc/helpers@0.5.18))(esbuild@0.28.2)(postcss@8.5.32)(webpack@5.110.3):
     dependencies:

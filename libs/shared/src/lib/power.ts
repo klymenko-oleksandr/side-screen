@@ -14,6 +14,17 @@ export interface PowerSignal {
   /** ISO timestamp of when the provider observed this state. */
   observedAt: string;
   detail?: string;
+  /** Vote weight this reading carried in the aggregator (0 when it didn't count). */
+  weight?: number;
+}
+
+/** A cut DTEK reports for the address right now (live status). */
+export interface LiveOutage {
+  /** DTEK's reason, e.g. "Стабілізаційне відключення". */
+  reason: string;
+  start: string;
+  /** Estimated restore time. */
+  end: string;
 }
 
 /** One 30-minute slot of the outage schedule. */
@@ -34,7 +45,8 @@ export interface TimeWindow {
 }
 
 export interface DeviceStatus {
-  batteryPct: number;
+  /** Null when the battery can't be read (not macOS, pmset failed). */
+  batteryPct: number | null;
   onAc: boolean;
   internet: {
     online: boolean;
@@ -56,8 +68,14 @@ export interface PowerData {
   /** Present once DTEK publishes tomorrow's schedule. */
   tomorrow: DaySchedule | null;
   device: DeviceStatus;
-  /** Hours without power over the last 7 days (PRD P5). */
+  /** Hours without power over the last 7 days (PRD P5), from the local event log. */
   weekOffHours: number;
+  /** The outage DTEK lists for the address now, if any (PRD P2). */
+  outage: LiveOutage | null;
+  /** Aggregator score: sum of `on` weights minus `off` weights (PRD P1b). */
+  score: number;
+  /** Something the user should know, e.g. "DTEK unreachable" or "address not set". */
+  notice: string | null;
 }
 
 export type PowerSnapshot = WithMeta<PowerData>;

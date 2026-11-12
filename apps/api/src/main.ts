@@ -1,10 +1,14 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app/app.module';
 import { loadConfig, type LoadedConfig } from './config/config.loader';
+import { loadDotEnv } from './config/env';
 import { TailLogger } from './logging/tail-logger';
 
 async function bootstrap() {
   const logger = new TailLogger();
+
+  const envPath = loadDotEnv();
+  if (envPath) logger.log(`Loaded secrets from ${envPath}`, 'Config');
 
   let loaded: LoadedConfig;
   try {

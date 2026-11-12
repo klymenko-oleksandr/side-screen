@@ -23,6 +23,9 @@ export function powerSnapshot(
       internet: { online: true, latencyMs: 18 },
     },
     weekOffHours: 41,
+    outage: null,
+    score: 4,
+    notice: null,
     meta: { updatedAt: at(9, 14).toISOString(), stale: false, mock: true },
     ...overrides,
   };
