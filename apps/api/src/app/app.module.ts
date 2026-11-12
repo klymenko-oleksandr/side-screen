@@ -24,11 +24,12 @@ export class AppModule {
     opts: { serveWeb?: boolean } = {},
   ): DynamicModule {
     const root = webDir();
-    const serveWeb =
-      (opts.serveWeb ?? true) && existsSync(resolve(root, 'index.html'));
-    if (opts.serveWeb !== false && !serveWeb) {
+    // Always mount the UI, even before it's built: files are read per request, so a
+    // build that finishes after the server starts is picked up without a restart.
+    const serveWeb = opts.serveWeb ?? true;
+    if (serveWeb && !existsSync(resolve(root, 'index.html'))) {
       new Logger('AppModule').warn(
-        `No web build at ${root}; serving /api only (run "pnpm build" or use "pnpm dev")`,
+        `No web build at ${root} yet; run "pnpm build" (or use "pnpm dev" on :4200)`,
       );
     }
 
