@@ -242,17 +242,40 @@ const GH_HEADERS = {
   'X-GitHub-Api-Version': '2022-11-28',
 };
 
+/** GitHub sends a token's expiry as `github-authentication-token-expiration: 2027-02-10 12:00:00 +0200`. */
+export function parseTokenExpiry(header: string | null): Date | null {
+  const m =
+    /(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}:\d{2})\s*(?:([+-]\d{2})(\d{2})|UTC|Z)?/.exec(
+      header ?? '',
+    );
+  if (!m) return null;
+  const offset = m[3] ? `${m[3]}:${m[4]}` : 'Z';
+  const date = new Date(`${m[1]}T${m[2]}${offset}`);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+export interface GithubResult {
+  pullRequests: PullRequestStatus[];
+  tokenExpiresAt: Date | null;
+}
+
 export async function githubPullRequests(
   token: string | undefined,
   repos: string[],
   max: number,
-): Promise<PullRequestStatus[]> {
+): Promise<GithubResult> {
+  let tokenExpiresAt: Date | null = null;
   const perRepo = await Promise.all(
     repos.map(async (repo) => {
       const pulls = await getJson<GhPull[]>(
         `https://api.github.com/repos/${repo}/pulls?state=open&per_page=${max}&sort=updated&direction=desc`,
         token,
         GH_HEADERS,
+        (res) => {
+          tokenExpiresAt ??= parseTokenExpiry(
+            res.headers.get('github-authentication-token-expiration'),
+          );
+        },
       );
       return pulls.map((p) => ({ repo, p }));
     }),
@@ -262,7 +285,7 @@ export async function githubPullRequests(
     .sort((a, b) => b.p.updated_at.localeCompare(a.p.updated_at))
     .slice(0, max);
 
-  return Promise.all(
+  const pullRequests = await Promise.all(
     newest.map(async ({ repo, p }): Promise<PullRequestStatus> => {
       const runs = await getJson<GhCheckRuns>(
         `https://api.github.com/repos/${repo}/commits/${p.head.sha}/check-runs?per_page=50`,
@@ -278,4 +301,5 @@ export async function githubPullRequests(
       };
     }),
   );
+  return { pullRequests, tokenExpiresAt };
 }

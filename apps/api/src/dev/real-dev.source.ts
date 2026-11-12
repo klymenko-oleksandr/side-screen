@@ -12,6 +12,7 @@ import { DevSource } from './dev.source';
 import { describeFetchError } from './http';
 import {
   type DeployTarget,
+  type GithubResult,
   githubPullRequests,
   renderDeploys,
   supabaseHealth,
@@ -57,7 +58,7 @@ export class RealDevSource extends DevSource {
     const notices: string[] = [];
     const jobs: Array<{
       label: string;
-      run: () => Promise<DeployStatus[] | PullRequestStatus[]>;
+      run: () => Promise<DeployStatus[] | GithubResult>;
     }> = [];
 
     for (const { provider, label, token: tokenKey } of PROVIDERS) {
@@ -108,7 +109,10 @@ export class RealDevSource extends DevSource {
         failures++;
         notices.push(`${job.label}: ${describeFetchError(result.reason)}`);
       } else if (job.label === 'GitHub') {
-        pullRequests = result.value as PullRequestStatus[];
+        const gh = result.value as GithubResult;
+        pullRequests = gh.pullRequests;
+        const expiry = expiryNotice(gh.tokenExpiresAt, new Date());
+        if (expiry) notices.push(expiry);
       } else {
         deploys.push(...(result.value as DeployStatus[]));
       }
@@ -127,4 +131,20 @@ export class RealDevSource extends DevSource {
       notices,
     };
   }
+}
+
+const EXPIRY_WARN_DAYS = 14;
+
+/** "GitHub token expires in 9 days (10 Feb)": shown during the last two weeks of a token's life. */
+export function expiryNotice(expiresAt: Date | null, now: Date): string | null {
+  if (!expiresAt) return null;
+  const days = Math.ceil((expiresAt.getTime() - now.getTime()) / 86_400_000);
+  if (days > EXPIRY_WARN_DAYS) return null;
+  const date = expiresAt.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+  });
+  if (days <= 0)
+    return `GitHub: GITHUB_TOKEN expired on ${date}; generate a new one`;
+  return `GitHub: GITHUB_TOKEN expires in ${days} day${days === 1 ? '' : 's'} (${date}); regenerate it`;
 }

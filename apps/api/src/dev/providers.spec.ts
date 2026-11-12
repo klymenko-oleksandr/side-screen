@@ -2,12 +2,13 @@ import { parseConfig } from '../config/config.loader';
 import {
   ciState,
   githubPullRequests,
+  parseTokenExpiry,
   renderState,
   supabaseState,
   vercelDeploys,
   vercelState,
 } from './providers';
-import { RealDevSource } from './real-dev.source';
+import { expiryNotice, RealDevSource } from './real-dev.source';
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -123,11 +124,39 @@ describe('API clients', () => {
         check_runs: [{ status: 'completed', conclusion: 'success' }],
       },
     });
-    const prs = await githubPullRequests('tok', ['o/a', 'o/b'], 4);
+    const { pullRequests: prs } = await githubPullRequests(
+      'tok',
+      ['o/a', 'o/b'],
+      4,
+    );
     expect(prs.map((p) => [p.repo, p.number, p.ci])).toEqual([
       ['b', 7, 'fail'],
       ['a', 3, 'pass'],
     ]);
+  });
+});
+
+describe('GitHub token expiry', () => {
+  it('parses the expiry header', () => {
+    expect(parseTokenExpiry('2027-02-10 12:00:00 +0200')?.toISOString()).toBe(
+      '2027-02-10T10:00:00.000Z',
+    );
+    expect(parseTokenExpiry('2027-02-10 10:00:00 UTC')?.toISOString()).toBe(
+      '2027-02-10T10:00:00.000Z',
+    );
+    expect(parseTokenExpiry(null)).toBeNull();
+  });
+
+  it('warns only in the last two weeks', () => {
+    const expires = new Date('2027-02-10T10:00:00Z');
+    expect(expiryNotice(expires, new Date('2027-01-20T10:00:00Z'))).toBeNull();
+    expect(expiryNotice(expires, new Date('2027-02-01T10:00:00Z'))).toBe(
+      'GitHub: GITHUB_TOKEN expires in 9 days (10 Feb); regenerate it',
+    );
+    expect(expiryNotice(expires, new Date('2027-02-11T10:00:00Z'))).toMatch(
+      /expired on 10 Feb/,
+    );
+    expect(expiryNotice(null, new Date())).toBeNull();
   });
 });
 

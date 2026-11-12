@@ -22,6 +22,7 @@ export async function getJson<T>(
   url: string,
   token: string | undefined,
   headers: Record<string, string> = {},
+  onResponse?: (res: Response) => void,
 ): Promise<T> {
   const res = await fetch(url, {
     headers: {
@@ -32,6 +33,7 @@ export async function getJson<T>(
     },
     signal: AbortSignal.timeout(TIMEOUT_MS),
   });
+  onResponse?.(res);
   if (!res.ok) {
     const hint =
       res.status === 401 || res.status === 403
