@@ -1,0 +1,44 @@
+{
+  "server": { "host": "127.0.0.1", "port": 4300 },
+  "locale": { "city": "Kyiv", "timezone": "Europe/Kyiv" },
+  "ui": { "showFooter": false, "logLines": 6 },
+  "mock": true,
+
+  "power": {
+    "address": { "street": "", "house": "" },
+    "holdSeconds": 60,
+    "freshMinutes": 10,
+    "threshold": 2,
+    "weights": {
+      "chargerAc": 2,
+      "chargerBattery": 1,
+      "dtekLiveOutage": 3,
+      "dtekLiveClear": 2,
+      "dtekSchedule": 1,
+      "monitor": 3
+    }
+  },
+
+  "calendar": { "calendarId": "primary" },
+
+  "dev": {
+    "deploys": [
+      { "name": "klavkogonky", "provider": "vercel" },
+      { "name": "tennis-api", "provider": "render" },
+      { "name": "tennis-web", "provider": "vercel" },
+      { "name": "tennis-db", "provider": "supabase" }
+    ],
+    "repos": []
+  },
+
+  "logs": { "source": "self" },
+
+  "polling": {
+    "powerSeconds": 5,
+    "devSeconds": 60,
+    "calendarMinutes": 5,
+    "dtekLiveMinutes": 5,
+    "dtekScheduleHours": 6,
+    "weatherMinutes": 30
+  }
+}
