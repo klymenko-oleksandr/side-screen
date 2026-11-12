@@ -42,9 +42,29 @@ sed -e "s|__LABEL__|$LABEL|g" \
 plutil -lint "$PLIST" >/dev/null
 
 echo "→ Loading agent $LABEL"
-launchctl bootout "$DOMAIN/$LABEL" 2>/dev/null || true
-launchctl bootstrap "$DOMAIN" "$PLIST"
 launchctl enable "$DOMAIN/$LABEL"
+if launchctl print "$DOMAIN/$LABEL" >/dev/null 2>&1; then
+  launchctl bootout "$DOMAIN/$LABEL" 2>/dev/null || true
+  # bootout returns before the old job is gone; bootstrapping too early fails with
+  # "Bootstrap failed: 5: Input/output error". Wait for it to disappear.
+  for _ in $(seq 1 50); do
+    launchctl print "$DOMAIN/$LABEL" >/dev/null 2>&1 || break
+    sleep 0.2
+  done
+fi
+
+loaded=false
+for attempt in 1 2 3 4 5; do
+  if launchctl bootstrap "$DOMAIN" "$PLIST" 2>/dev/null; then
+    loaded=true
+    break
+  fi
+  sleep "$attempt"
+done
+if [[ "$loaded" != true ]]; then
+  echo "launchctl bootstrap kept failing. Try: launchctl bootstrap $DOMAIN $PLIST" >&2
+  exit 1
+fi
 
 PORT="$(node -e "try{const c=require('$REPO/config/side-screen.config.json');console.log(c.server?.port??4300)}catch{console.log(4300)}")"
 echo -n "→ Waiting for http://127.0.0.1:$PORT/api/health "
