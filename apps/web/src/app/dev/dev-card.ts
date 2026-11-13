@@ -50,7 +50,10 @@ const CI: Record<CiState, { text: string; color: string }> = {
     </div>
     @for (pr of prs(); track pr.repo + pr.number) {
       <div class="flex justify-between gap-10" data-testid="pr">
-        <span class="truncate">#{{ pr.number }} {{ pr.title }}</span>
+        <span class="truncate"
+          ><span class="text-muted">{{ pr.repo }}</span>
+          {{ pr.bot ? pr.title : '#' + pr.number + ' ' + pr.title }}</span
+        >
         <span class="shrink-0" [class]="pr.color">{{ pr.text }}</span>
       </div>
     }

@@ -57,12 +57,15 @@ interface StripCell {
               <ss-freshness [meta]="p.meta" [timeZone]="timeZone()" />
               <button
                 type="button"
-                class="cursor-pointer rounded-chip px-4 text-meta text-dim hover:text-ink"
-                title="Refresh now"
-                aria-label="Refresh power status"
+                class="cursor-pointer rounded-chip px-4 text-meta text-dim hover:text-ink disabled:cursor-wait"
+                title="Check the schedule now (at most once a minute)"
+                aria-label="Check the outage schedule now"
+                [disabled]="refreshing()"
                 (click)="refresh.emit()"
               >
-                ↻
+                <span class="inline-block" [class.animate-spin]="refreshing()"
+                  >↻</span
+                >
               </button>
             </span>
           </div>
@@ -146,6 +149,17 @@ interface StripCell {
       </div>
 
       <div
+        class="flex flex-wrap items-baseline justify-between gap-x-12 text-label tracking-normal text-dim"
+        data-testid="schedule-info"
+      >
+        <span>{{ scheduleLine() }}</span>
+        @if (refreshMessage(); as msg) {
+          <span class="text-warn-soft" data-testid="refresh-message">{{
+            msg
+          }}</span>
+        }
+      </div>
+      <div
         class="flex flex-wrap justify-between gap-x-20 gap-y-4 text-meta text-muted"
         data-testid="devices"
       >
@@ -188,7 +202,34 @@ export class PowerCard {
   readonly power = input<PowerSnapshot | null>(null);
   readonly now = input.required<Date>();
   readonly timeZone = input.required<string>();
+  readonly refreshing = input(false);
+  readonly refreshMessage = input<string | null>(null);
   readonly refresh = output<void>();
+
+  private static readonly SOURCE_LABEL = {
+    yasno: 'Yasno',
+    dtek: 'DTEK',
+    mock: 'Mock',
+  } as const;
+
+  /** "Yasno schedule · checked 10:44 · next 11:14 · published 09:45" */
+  protected readonly scheduleLine = computed(() => {
+    const info = this.power()?.schedule;
+    if (!info) return '';
+    const tz = this.timeZone();
+    const parts = [`${PowerCard.SOURCE_LABEL[info.source]} schedule`];
+    parts.push(
+      info.fetchedAt
+        ? `checked ${hhmm(info.fetchedAt, tz)}`
+        : 'not checked yet',
+    );
+    if (info.nextFetchAt) parts.push(`next ${hhmm(info.nextFetchAt, tz)}`);
+    if (info.publishedAt)
+      parts.push(
+        `updated by ${PowerCard.SOURCE_LABEL[info.source]} ${hhmm(info.publishedAt, tz)}`,
+      );
+    return parts.join(' · ');
+  });
 
   protected readonly statusClass = computed(
     () => STATUS_COLOR[this.power()?.status ?? 'UNCONFIRMED'],

@@ -38,6 +38,8 @@ import { FocusCard } from './today/focus-card';
         [power]="store.power()"
         [now]="now()"
         [timeZone]="tz()"
+        [refreshing]="store.refreshing()"
+        [refreshMessage]="store.refreshMessage()"
         (refresh)="store.refreshPower()"
       />
       <div class="flex gap-12 max-[800px]:flex-col">

@@ -1,13 +1,17 @@
-import { Controller, Get, HttpCode, Post } from '@nestjs/common';
-import { DtekService } from './dtek/dtek.service';
+import { Controller, Get, HttpCode, Inject, Post } from '@nestjs/common';
+import type { RefreshResponse } from '@side-screen/shared';
+import { SIDE_SCREEN_CONFIG } from '../config/config.module';
+import type { SideScreenConfig } from '../config/config.schema';
 import { PowerService } from './power.service';
 import { RealPowerSource } from './real-power.source';
+import { PowerSchedule } from './schedule/power-schedule';
 
 @Controller('power')
 export class PowerController {
   constructor(
+    @Inject(SIDE_SCREEN_CONFIG) private readonly config: SideScreenConfig,
     private readonly power: PowerService,
-    private readonly dtek: DtekService,
+    private readonly schedule: PowerSchedule,
     private readonly real: RealPowerSource,
   ) {}
 
@@ -16,12 +20,18 @@ export class PowerController {
     return this.power.snapshot();
   }
 
-  /** Manual refresh from the Power module's button: reloads DTEK, then recomputes. */
+  /**
+   * The ↻ button: fetches the schedule now (one small request) and recomputes the status.
+   * Rate-limited to once a minute; a press inside that window answers from cache.
+   */
   @Post('refresh')
   @HttpCode(200)
-  async refresh() {
-    await this.dtek.refreshNow();
-    return this.power.refresh();
+  async refresh(): Promise<RefreshResponse> {
+    const result = this.config.mock
+      ? { refreshed: true, message: 'Mock data', retryInSec: 0 }
+      : await this.schedule.refreshNow();
+    await this.power.refresh();
+    return result;
   }
 
   /** What each provider reported and how the aggregator voted (PRD P1e). `pnpm power:check` prints it. */

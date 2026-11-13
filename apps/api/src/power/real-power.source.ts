@@ -14,6 +14,7 @@ import {
   type Verdict,
 } from './aggregator/aggregator';
 import { DtekService } from './dtek/dtek.service';
+import { PowerSchedule, type ScheduleView } from './schedule/power-schedule';
 import { MacSignals } from './mac/mac-signals';
 import { offHoursInWindow, WEEK_MS } from './power-log';
 import { PowerSource } from './power.source';
@@ -24,10 +25,14 @@ import {
 
 export interface PowerDebug {
   address: SideScreenConfig['power']['address'];
-  dtek: Omit<ReturnType<DtekService['view']>, 'today' | 'tomorrow'> & {
+  group: string;
+  schedule: Omit<ScheduleView, 'today' | 'tomorrow'> & {
+    today: undefined;
+    tomorrow: undefined;
     hasToday: boolean;
     hasTomorrow: boolean;
   };
+  dtekLive: unknown;
   readings: SignalReading[];
   verdict: Omit<Verdict, 'counted'> & { counted: string[] };
   battery: unknown;
@@ -35,8 +40,8 @@ export interface PowerDebug {
 }
 
 /**
- * Real Power module data (phase 2): signal providers → aggregator → status, plus the DTEK
- * schedule, the Mac's battery and ping, and the 7-day off total from the SQLite event log.
+ * Real Power module data (phase 2): signal providers → aggregator → status, plus the outage
+ * schedule (Yasno by default), the Mac's battery and ping, and the 7-day off total from the SQLite event log.
  */
 @Injectable()
 export class RealPowerSource extends PowerSource {
@@ -51,6 +56,7 @@ export class RealPowerSource extends PowerSource {
     @Inject(POWER_SIGNAL_PROVIDERS)
     private readonly providers: PowerSignalProvider[],
     private readonly dtek: DtekService,
+    private readonly schedule: PowerSchedule,
     private readonly mac: MacSignals,
     private readonly storage: Storage,
   ) {
@@ -66,7 +72,9 @@ export class RealPowerSource extends PowerSource {
   }
 
   async fetch(now: Date): Promise<ModuleData<'power'>> {
-    this.dtek.ensureFresh(now);
+    this.schedule.ensureFresh(now);
+    const dtekLive = this.config.power.dtekLive;
+    if (dtekLive && this.schedule !== this.dtek) this.dtek.ensureFresh(now);
     const battery = await this.mac.battery();
     const internet = this.mac.internet(now);
     const readings = this.providers.map((p) => p.read({ now, battery }));
@@ -80,8 +88,9 @@ export class RealPowerSource extends PowerSource {
       );
     }
 
-    const view = this.dtek.view(now);
-    const outage = this.liveOutage(now, view.house);
+    const view = this.schedule.schedule(now);
+    const dtekView = dtekLive ? this.dtek.view(now) : null;
+    const outage = this.liveOutage(now, dtekView?.house ?? null);
     const nextCut: TimeWindow | null = outage
       ? { start: outage.start, end: outage.end }
       : findNextCut([view.today, view.tomorrow], now);
@@ -96,13 +105,22 @@ export class RealPowerSource extends PowerSource {
 
     this.last = {
       address: this.config.power.address,
-      dtek: {
+      group: this.config.power.group,
+      schedule: {
         ...view,
-        hasToday: Boolean(view.today),
-        hasTomorrow: Boolean(view.tomorrow),
         today: undefined,
         tomorrow: undefined,
-      } as PowerDebug['dtek'],
+        hasToday: Boolean(view.today),
+        hasTomorrow: Boolean(view.tomorrow),
+      },
+      dtekLive: dtekView
+        ? {
+            street: dtekView.street,
+            house: dtekView.house,
+            liveAt: dtekView.liveAt,
+            error: dtekView.error,
+          }
+        : 'off',
       readings,
       verdict: { ...verdict, counted: [...verdict.counted] },
       battery,
@@ -134,7 +152,17 @@ export class RealPowerSource extends PowerSource {
       ),
       outage,
       score: verdict.score,
-      notice: this.notice(view.error),
+      notice: this.notice(view, dtekView?.error ?? null),
+      schedule: {
+        source: view.source,
+        fetchedAt: view.fetchedAt
+          ? new Date(view.fetchedAt).toISOString()
+          : null,
+        publishedAt: view.publishedAt,
+        nextFetchAt: view.nextFetchAt
+          ? new Date(view.nextFetchAt).toISOString()
+          : null,
+      },
     };
   }
 
@@ -144,7 +172,7 @@ export class RealPowerSource extends PowerSource {
 
   private liveOutage(
     now: Date,
-    house: ReturnType<DtekService['view']>['house'],
+    house: ReturnType<DtekService['view']>['house'] | null,
   ) {
     if (!house?.start || !house.end) return null;
     const t = now.getTime();
@@ -156,10 +184,15 @@ export class RealPowerSource extends PowerSource {
     };
   }
 
-  private notice(dtekError: string | null): string | null {
-    if (!this.dtek.configured)
-      return 'Set power.address in config/side-screen.config.json';
-    if (dtekError) return `DTEK: ${dtekError}`;
+  private notice(
+    view: ScheduleView,
+    dtekLiveError: string | null,
+  ): string | null {
+    if (!this.schedule.configured) return this.schedule.configHint;
+    if (view.error)
+      return `${view.source === 'yasno' ? 'Yasno' : 'DTEK'}: ${view.error}`;
+    if (view.status) return view.status;
+    if (dtekLiveError) return `DTEK live status: ${dtekLiveError}`;
     return null;
   }
 }

@@ -8,11 +8,13 @@ import { PowerController } from './power.controller';
 import { PowerService } from './power.service';
 import { PowerSource } from './power.source';
 import { RealPowerSource } from './real-power.source';
+import { PowerSchedule } from './schedule/power-schedule';
+import { YasnoService } from './yasno/yasno.service';
 import {
   ChargerSignal,
   DtekLiveSignal,
-  DtekScheduleSignal,
   POWER_SIGNAL_PROVIDERS,
+  ScheduleSignal,
   type PowerSignalProvider,
 } from './signals/signal-providers';
 
@@ -21,17 +23,27 @@ import {
   providers: [
     PowerService,
     DtekService,
+    YasnoService,
+    {
+      provide: PowerSchedule,
+      useFactory: (
+        config: SideScreenConfig,
+        yasno: YasnoService,
+        dtek: DtekService,
+      ) => (config.power.scheduleSource === 'dtek' ? dtek : yasno),
+      inject: [SIDE_SCREEN_CONFIG, YasnoService, DtekService],
+    },
     MacSignals,
     MockPowerSource,
     RealPowerSource,
     ChargerSignal,
-    DtekScheduleSignal,
+    ScheduleSignal,
     DtekLiveSignal,
     // v1 providers (PRD P1d). Add the HP monitor (phase 4), Telegram, LAN probe here later.
     {
       provide: POWER_SIGNAL_PROVIDERS,
       useFactory: (...providers: PowerSignalProvider[]) => providers,
-      inject: [DtekScheduleSignal, DtekLiveSignal, ChargerSignal],
+      inject: [ScheduleSignal, DtekLiveSignal, ChargerSignal],
     },
     {
       provide: PowerSource,
@@ -43,6 +55,6 @@ import {
       inject: [SIDE_SCREEN_CONFIG, RealPowerSource, MockPowerSource],
     },
   ],
-  exports: [DtekService],
+  exports: [PowerSchedule],
 })
 export class PowerModule {}

@@ -10,7 +10,7 @@ import type { SideScreenConfig } from '../config/config.schema';
 import { secret } from '../config/env';
 import { describeFetchError } from '../dev/http';
 import { mockToday } from '../mock/mock-schedule';
-import { DtekService } from '../power/dtek/dtek.service';
+import { PowerSchedule } from '../power/schedule/power-schedule';
 import { PowerModule } from '../power/power.module';
 import {
   type ModuleData,
@@ -102,13 +102,13 @@ export class IcsTodaySource extends TodaySource {
 
   constructor(
     @Inject(SIDE_SCREEN_CONFIG) private readonly config: SideScreenConfig,
-    private readonly dtek: DtekService,
+    private readonly schedule: PowerSchedule,
   ) {
     super();
   }
 
   async fetch(now: Date): Promise<ModuleData<'today'>> {
-    const cuts = cutItems(this.dtek.view(now).today);
+    const cuts = cutItems(this.schedule.schedule(now).today);
     const base = { focus: MOCK_FOCUS, focusSource: 'mock' as const };
     const url = secret('GOOGLE_CALENDAR_ICS_URL');
     if (!url) {

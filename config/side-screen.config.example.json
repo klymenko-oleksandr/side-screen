@@ -16,6 +16,13 @@
     "path": "data/side-screen.db"
   },
   "power": {
+    "group": "",
+    "scheduleSource": "yasno",
+    "dtekLive": false,
+    "yasno": {
+      "regionId": 25,
+      "dsoId": 902
+    },
     "address": {
       "street": "",
       "house": ""
@@ -52,11 +59,12 @@
   },
   "polling": {
     "powerSeconds": 5,
+    "pingSeconds": 15,
+    "scheduleMinutes": 30,
     "devSeconds": 60,
     "calendarMinutes": 5,
     "dtekLiveMinutes": 5,
     "dtekScheduleHours": 6,
-    "weatherMinutes": 30,
-    "pingSeconds": 15
+    "weatherMinutes": 30
   }
 }

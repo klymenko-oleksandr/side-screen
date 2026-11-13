@@ -26,6 +26,12 @@ export function powerSnapshot(
     outage: null,
     score: 4,
     notice: null,
+    schedule: {
+      source: 'yasno',
+      fetchedAt: at(10, 44).toISOString(),
+      publishedAt: at(9, 45).toISOString(),
+      nextFetchAt: at(11, 14).toISOString(),
+    },
     meta: { updatedAt: at(9, 14).toISOString(), stale: false, mock: true },
     ...overrides,
   };

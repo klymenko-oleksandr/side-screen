@@ -211,6 +211,7 @@ interface GhPull {
   number: number;
   title: string;
   html_url: string;
+  user?: { login: string; type?: string };
   draft?: boolean;
   head: { sha: string };
   updated_at: string;
@@ -235,6 +236,21 @@ export function ciState(runs: GhCheckRuns['check_runs']): CiState {
     return 'fail';
   if (runs.some((r) => r.status !== 'completed')) return 'pending';
   return 'pass';
+}
+
+const CI_RANK: Record<CiState, number> = {
+  fail: 3,
+  pending: 2,
+  pass: 1,
+  none: 0,
+};
+
+function shortRepo(repo: string): string {
+  return repo.split('/')[1] ?? repo;
+}
+
+function isBot(p: GhPull): boolean {
+  return p.user?.type === 'Bot' || /\[bot\]$/.test(p.user?.login ?? '');
 }
 
 const GH_HEADERS = {
@@ -268,7 +284,7 @@ export async function githubPullRequests(
   const perRepo = await Promise.all(
     repos.map(async (repo) => {
       const pulls = await getJson<GhPull[]>(
-        `https://api.github.com/repos/${repo}/pulls?state=open&per_page=${max}&sort=updated&direction=desc`,
+        `https://api.github.com/repos/${repo}/pulls?state=open&per_page=30&sort=updated&direction=desc`,
         token,
         GH_HEADERS,
         (res) => {
@@ -280,26 +296,57 @@ export async function githubPullRequests(
       return pulls.map((p) => ({ repo, p }));
     }),
   );
-  const newest = perRepo
-    .flat()
+  const all = perRepo.flat();
+  const ciFor = async (repo: string, sha: string): Promise<CiState> => {
+    const runs = await getJson<GhCheckRuns>(
+      `https://api.github.com/repos/${repo}/commits/${sha}/check-runs?per_page=50`,
+      token,
+      GH_HEADERS,
+    ).catch(() => ({ check_runs: [] }));
+    return ciState(runs.check_runs);
+  };
+
+  // People's PRs one per row, newest first.
+  const human = all
+    .filter(({ p }) => !isBot(p))
     .sort((a, b) => b.p.updated_at.localeCompare(a.p.updated_at))
     .slice(0, max);
+  const humanRows = await Promise.all(
+    human.map(async ({ repo, p }): Promise<PullRequestStatus> => ({
+      repo: shortRepo(repo),
+      number: p.number,
+      title: p.title,
+      ci: await ciFor(repo, p.head.sha),
+      url: p.html_url,
+    })),
+  );
 
-  const pullRequests = await Promise.all(
-    newest.map(async ({ repo, p }): Promise<PullRequestStatus> => {
-      const runs = await getJson<GhCheckRuns>(
-        `https://api.github.com/repos/${repo}/commits/${p.head.sha}/check-runs?per_page=50`,
-        token,
-        GH_HEADERS,
-      ).catch(() => ({ check_runs: [] }));
+  // Bot PRs (Dependabot, Renovate) folded into one row per repo, with the worst CI state.
+  const botsByRepo = new Map<string, GhPull[]>();
+  for (const { repo, p } of all.filter(({ p }) => isBot(p))) {
+    botsByRepo.set(repo, [...(botsByRepo.get(repo) ?? []), p]);
+  }
+  const botRows = await Promise.all(
+    [...botsByRepo].map(async ([repo, pulls]): Promise<PullRequestStatus> => {
+      const states = await Promise.all(
+        pulls.map((p) => ciFor(repo, p.head.sha)),
+      );
+      const worst = states.reduce<CiState>(
+        (w, c) => (CI_RANK[c] > CI_RANK[w] ? c : w),
+        'none',
+      );
       return {
-        repo: repo.split('/')[1] ?? repo,
-        number: p.number,
-        title: p.title,
-        ci: ciState(runs.check_runs),
-        url: p.html_url,
+        repo: shortRepo(repo),
+        number: pulls[0].number,
+        title: `${pulls.length} dependency update${pulls.length === 1 ? '' : 's'}`,
+        ci: worst,
+        url: `https://github.com/${repo}/pulls?q=is%3Apr+is%3Aopen+author%3Aapp%2Fdependabot`,
+        bot: true,
+        count: pulls.length,
       };
     }),
   );
+
+  const pullRequests = [...humanRows, ...botRows].slice(0, max);
   return { pullRequests, tokenExpiresAt };
 }

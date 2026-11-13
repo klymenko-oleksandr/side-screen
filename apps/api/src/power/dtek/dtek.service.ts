@@ -10,6 +10,12 @@ import type { SideScreenConfig } from '../../config/config.schema';
 import { describeFetchError } from '../../dev/http';
 import { Storage } from '../../storage/storage';
 import {
+  MANUAL_REFRESH_COOLDOWN_MS,
+  PowerSchedule,
+  type RefreshResult,
+  type ScheduleView,
+} from '../schedule/power-schedule';
+import {
   type DtekHouse,
   type DtekPage,
   factDay,
@@ -53,7 +59,10 @@ export interface DtekView {
  *   bot-protection page, the error is reported and the other power signals carry on.
  */
 @Injectable()
-export class DtekService {
+export class DtekService extends PowerSchedule {
+  readonly configHint =
+    'Set power.address (street and house) in config/side-screen.config.json';
+  private lastManual = 0;
   private readonly logger = new Logger(DtekService.name);
   private cookies = new Map<string, string>();
   private page: DtekPage | null = null;
@@ -68,7 +77,9 @@ export class DtekService {
   constructor(
     @Inject(SIDE_SCREEN_CONFIG) private readonly config: SideScreenConfig,
     private readonly storage: Storage,
-  ) {}
+  ) {
+    super();
+  }
 
   get configured(): boolean {
     const { street, house } = this.config.power.address;
@@ -87,10 +98,42 @@ export class DtekService {
     if (pageDue || liveDue) void this.refresh(now, pageDue);
   }
 
-  /** Reloads page and live status now (manual refresh button). */
-  async refreshNow(now = new Date()): Promise<void> {
-    if (!this.configured) return;
+  /** Reloads page and live status now (manual refresh button), at most once a minute. */
+  async refreshNow(now = new Date()): Promise<RefreshResult> {
+    if (!this.configured)
+      return { refreshed: false, message: this.configHint, retryInSec: 0 };
+    const wait = this.lastManual + MANUAL_REFRESH_COOLDOWN_MS - now.getTime();
+    if (wait > 0) {
+      const retryInSec = Math.ceil(wait / 1000);
+      return {
+        refreshed: false,
+        message: `Checked moments ago; try again in ${retryInSec} s`,
+        retryInSec,
+      };
+    }
+    this.lastManual = now.getTime();
     await (this.inFlight ?? this.refresh(now, true));
+    return this.error
+      ? { refreshed: false, message: `DTEK: ${this.error}`, retryInSec: 60 }
+      : { refreshed: true, message: 'Schedule checked', retryInSec: 60 };
+  }
+
+  schedule(now: Date): ScheduleView {
+    const v = this.view(now);
+    return {
+      source: 'dtek',
+      group: v.group,
+      today: v.today,
+      tomorrow: v.tomorrow,
+      fetchedAt: v.pageAt,
+      publishedAt: null,
+      nextFetchAt: this.lastAttempt.page
+        ? this.lastAttempt.page +
+          this.config.polling.dtekScheduleHours * 3_600_000
+        : null,
+      status: null,
+      error: v.error,
+    };
   }
 
   view(now: Date): DtekView {

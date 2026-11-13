@@ -97,6 +97,63 @@ describe('API clients', () => {
     expect(calls.every((c) => c.includes('teamId=team_1'))).toBe(true);
   });
 
+  it('folds bot PRs into one row per repo with the worst CI state', async () => {
+    stubFetch({
+      '/repos/o/a/pulls': [
+        {
+          number: 14,
+          title: 'Bump x',
+          html_url: 'u14',
+          head: { sha: 'b14' },
+          updated_at: '2026-11-12T00:00:00Z',
+          user: { login: 'dependabot[bot]', type: 'Bot' },
+        },
+        {
+          number: 13,
+          title: 'Bump y',
+          html_url: 'u13',
+          head: { sha: 'b13' },
+          updated_at: '2026-11-11T00:00:00Z',
+          user: { login: 'dependabot[bot]', type: 'Bot' },
+        },
+        {
+          number: 9,
+          title: 'Ghost replays',
+          html_url: 'u9',
+          head: { sha: 'h9' },
+          updated_at: '2026-11-10T00:00:00Z',
+          user: { login: 'klymenko-oleksandr', type: 'User' },
+        },
+      ],
+      '/commits/b14/check-runs': {
+        check_runs: [{ status: 'completed', conclusion: 'success' }],
+      },
+      '/commits/b13/check-runs': {
+        check_runs: [{ status: 'completed', conclusion: 'failure' }],
+      },
+      '/commits/h9/check-runs': {
+        check_runs: [{ status: 'in_progress', conclusion: null }],
+      },
+    });
+    const { pullRequests } = await githubPullRequests('tok', ['o/a'], 4);
+    expect(pullRequests).toEqual([
+      {
+        repo: 'a',
+        number: 9,
+        title: 'Ghost replays',
+        ci: 'pending',
+        url: 'u9',
+      },
+      expect.objectContaining({
+        repo: 'a',
+        title: '2 dependency updates',
+        ci: 'fail',
+        bot: true,
+        count: 2,
+      }),
+    ]);
+  });
+
   it('lists the newest open PRs across repos with their CI state', async () => {
     stubFetch({
       '/repos/o/a/pulls': [

@@ -20,6 +20,10 @@ export interface PullRequestStatus {
   title: string;
   ci: CiState;
   url: string;
+  /** Opened by a bot (Dependabot, Renovate). Bot PRs are folded: one row per repo. */
+  bot?: boolean;
+  /** For a folded bot row: how many PRs it stands for. */
+  count?: number;
 }
 
 /** Claude Code session progress (PRD D5, later phase). */

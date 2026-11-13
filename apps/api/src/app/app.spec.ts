@@ -85,7 +85,11 @@ describe('Side Screen API', () => {
     const res = await request(app.getHttpServer())
       .post('/api/power/refresh')
       .expect(200);
-    expect(['ON', 'OFF', 'UNCONFIRMED']).toContain(res.body.status);
+    expect(res.body).toEqual({
+      refreshed: true,
+      message: 'Mock data',
+      retryInSec: 0,
+    });
   });
 
   it('streams every module snapshot, then the log backlog, on connect', async () => {

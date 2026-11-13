@@ -88,7 +88,7 @@ A missing value only empties its own source and shows a note on the card. With `
 | Calendar (T1, T2)        | Secret iCal URL + DTEK cut windows                                       | Recurring events expanded; all-day events shown as "day"                                                                                                |
 | Deploys, DB, PRs (D1–D3) | Vercel, Render, Supabase, GitHub APIs                                    | Every 60 s                                                                                                                                              |
 
-**DTEK access.** The server fetches the public page for your address, identifies itself as SideScreen, and polls gently. The site sits behind bot protection; if it ever answers with a challenge page instead of the schedule, the Power card says so, and the status falls back to the other signals and the last stored schedule. Run `pnpm power:check` to see what DTEK returned.
+**Why Yasno, not the DTEK page.** The DTEK Kyiv Grids page sits behind bot protection and answers 403 to a server. Yasno (DTEK's retail company) serves the same schedules as plain public JSON. The DTEK client is still there: `power.scheduleSource: "dtek"` or `power.dtekLive: true` turn it back on, and it never tries to get around the protection. `pnpm power:check` shows what each source returned.
 
 ## How it fits together
 

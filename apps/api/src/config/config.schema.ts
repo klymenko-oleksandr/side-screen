@@ -46,7 +46,20 @@ export const configSchema = z.object({
 
   power: z
     .object({
-      /** Looked up on the DTEK Kyiv Grids shutdowns page; the outage group comes from it. */
+      /** Outage group (черга) as Yasno and DTEK show it, e.g. `38.1`. Drives the schedule. */
+      group: z.string().default(''),
+      /** Where the schedule comes from. The DTEK page sits behind bot protection; Yasno has a public JSON API. */
+      scheduleSource: z.enum(['yasno', 'dtek']).default('yasno'),
+      /** Also ask the DTEK page for the house's live status. Off by default: it answers 403 to servers. */
+      dtekLive: z.boolean().default(false),
+      yasno: z
+        .object({
+          /** Kyiv = region 25, DTEK Kyiv Grids = DSO 902. */
+          regionId: z.number().int().default(25),
+          dsoId: z.number().int().default(902),
+        })
+        .prefault({}),
+      /** Street and house for the DTEK page (live status, or the DTEK schedule source). */
       address: z
         .object({
           street: z.string().default(''),
@@ -116,6 +129,8 @@ export const configSchema = z.object({
   polling: z
     .object({
       powerSeconds: z.number().positive().default(5),
+      /** Yasno schedule fetch. Tomorrow's schedule usually appears in the evening. */
+      scheduleMinutes: z.number().min(5).default(30),
       pingSeconds: z.number().positive().default(15),
       devSeconds: z.number().positive().default(60),
       calendarMinutes: z.number().positive().default(5),

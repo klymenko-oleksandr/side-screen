@@ -74,8 +74,27 @@ export interface PowerData {
   outage: LiveOutage | null;
   /** Aggregator score: sum of `on` weights minus `off` weights (PRD P1b). */
   score: number;
-  /** Something the user should know, e.g. "DTEK unreachable" or "address not set". */
+  /** Something the user should know, e.g. "Yasno unreachable" or "group not set". */
   notice: string | null;
+  /** Where the schedule came from and when it was last checked. */
+  schedule: ScheduleInfo | null;
+}
+
+export interface ScheduleInfo {
+  source: 'yasno' | 'dtek' | 'mock';
+  /** Last successful fetch (ISO). */
+  fetchedAt: string | null;
+  /** When the operator last changed the schedule (ISO), if it says. */
+  publishedAt: string | null;
+  /** Next automatic fetch (ISO). */
+  nextFetchAt: string | null;
+}
+
+/** Answer to `POST /api/power/refresh`. */
+export interface RefreshResponse {
+  refreshed: boolean;
+  message: string;
+  retryInSec: number;
 }
 
 export type PowerSnapshot = WithMeta<PowerData>;

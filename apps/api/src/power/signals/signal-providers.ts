@@ -4,6 +4,7 @@ import { SIDE_SCREEN_CONFIG } from '../../config/config.module';
 import type { SideScreenConfig } from '../../config/config.schema';
 import type { SignalReading } from '../aggregator/aggregator';
 import { DtekService } from '../dtek/dtek.service';
+import { PowerSchedule } from '../schedule/power-schedule';
 import type { BatteryReading } from '../mac/mac-signals';
 
 /** What every provider sees on a power tick. */
@@ -56,23 +57,24 @@ export class ChargerSignal implements PowerSignalProvider {
   }
 }
 
-/** DTEK schedule: what is expected for this half-hour. `maybe` slots don't vote. */
+/** The outage schedule (Yasno or DTEK): what is expected for this half-hour. `maybe` slots don't vote. */
 @Injectable()
-export class DtekScheduleSignal implements PowerSignalProvider {
-  readonly id = 'dtek-schedule';
+export class ScheduleSignal implements PowerSignalProvider {
+  readonly id = 'schedule';
   constructor(
     @Inject(SIDE_SCREEN_CONFIG) private readonly config: SideScreenConfig,
-    private readonly dtek: DtekService,
+    private readonly schedule: PowerSchedule,
   ) {}
 
   read({ now }: SignalContext): SignalReading {
+    const view = this.schedule.schedule(now);
     const base = {
       source: this.id,
-      label: 'DTEK schedule',
+      label: view.source === 'yasno' ? 'Yasno schedule' : 'DTEK schedule',
       observedAt: now.getTime(),
       alwaysFresh: true,
     };
-    const slot = slotStateAt(this.dtek.view(now).today, now);
+    const slot = slotStateAt(view.today, now);
     if (slot === 'on' || slot === 'off') {
       return {
         ...base,
@@ -101,6 +103,16 @@ export class DtekLiveSignal implements PowerSignalProvider {
 
   read({ now }: SignalContext): SignalReading {
     const w = this.config.power.weights;
+    if (!this.config.power.dtekLive) {
+      return {
+        source: this.id,
+        label: 'DTEK live status',
+        observedAt: 0,
+        state: 'unknown',
+        weight: 0,
+        detail: 'off (power.dtekLive)',
+      };
+    }
     const view = this.dtek.view(now);
     const base = {
       source: this.id,

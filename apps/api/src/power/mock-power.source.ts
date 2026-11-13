@@ -87,6 +87,12 @@ export class MockPowerSource extends PowerSource {
           : null,
       score: isOff ? -5 : 4,
       notice: null,
+      schedule: {
+        source: 'mock',
+        fetchedAt: now.toISOString(),
+        publishedAt: null,
+        nextFetchAt: null,
+      },
     };
   }
 }

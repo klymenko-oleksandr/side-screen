@@ -101,6 +101,31 @@ describe('PowerCard', () => {
     expect(text(el, 'devices')).toContain('MacBook —');
   });
 
+  it('says where the schedule came from and when it was checked', () => {
+    expect(text(render(), 'schedule-info')).toBe(
+      'Yasno schedule · checked 10:44 · next 11:14 · updated by Yasno 09:45',
+    );
+  });
+
+  it('shows the refresh result and spins while refreshing', () => {
+    const fixture = TestBed.createComponent(PowerCard);
+    fixture.componentRef.setInput('power', powerSnapshot());
+    fixture.componentRef.setInput('now', at(9, 14));
+    fixture.componentRef.setInput('timeZone', tz);
+    fixture.componentRef.setInput('refreshing', true);
+    fixture.componentRef.setInput(
+      'refreshMessage',
+      'Checked moments ago; try again in 40 s',
+    );
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('button')?.disabled).toBe(true);
+    expect(el.querySelector('.animate-spin')).not.toBeNull();
+    expect(text(el, 'refresh-message')).toBe(
+      'Checked moments ago; try again in 40 s',
+    );
+  });
+
   it('says when no cut is scheduled', () => {
     expect(render(powerSnapshot({ nextCut: null })).textContent).toContain(
       'No cuts scheduled',

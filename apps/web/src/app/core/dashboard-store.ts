@@ -10,6 +10,7 @@ import {
   type LogLine,
   MODULE_NAMES,
   type ModuleName,
+  type RefreshResponse,
   type SnapshotEvents,
   STREAM_PATH,
   type UiConfig,
@@ -18,6 +19,7 @@ import {
 /** How long to wait before reopening a stream the browser gave up on (e.g. server restarting). */
 export const RECONNECT_MS = 5_000;
 const MAX_LOG_LINES = 50;
+const REFRESH_MESSAGE_MS = 6_000;
 /** `EventSource.CLOSED`, spelled out so the store also loads where EventSource is missing (tests). */
 const CLOSED = 2;
 
@@ -117,9 +119,32 @@ export class DashboardStore {
   }
 
   /** Forces a power refresh; the result arrives over the stream. */
+  private readonly _refreshing = signal(false);
+  readonly refreshing = this._refreshing.asReadonly();
+  private readonly _refreshMessage = signal<string | null>(null);
+  /** Result of the last ↻ press, shown for a few seconds. */
+  readonly refreshMessage = this._refreshMessage.asReadonly();
+  private messageTimer?: ReturnType<typeof setTimeout>;
+
+  /** The ↻ button: the server fetches the schedule (rate-limited); the new data arrives over the stream. */
   async refreshPower(): Promise<void> {
-    await fetch('/api/power/refresh', { method: 'POST' }).catch(
-      () => undefined,
+    if (this._refreshing()) return;
+    this._refreshing.set(true);
+    let message: string;
+    try {
+      const res = await fetch('/api/power/refresh', { method: 'POST' });
+      const body = (await res.json()) as RefreshResponse;
+      message = body.message;
+    } catch {
+      message = 'Server not reachable';
+    } finally {
+      this._refreshing.set(false);
+    }
+    this._refreshMessage.set(message);
+    clearTimeout(this.messageTimer);
+    this.messageTimer = setTimeout(
+      () => this._refreshMessage.set(null),
+      REFRESH_MESSAGE_MS,
     );
   }
 
