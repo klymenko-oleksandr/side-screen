@@ -9,6 +9,7 @@ import { PowerSource } from './power.source';
 export class PowerService extends SnapshotService<'power'> {
   protected readonly module = 'power';
   protected readonly intervalMs: number;
+  protected override readonly slowOnBattery = false;
 
   constructor(
     source: PowerSource,
@@ -17,6 +18,14 @@ export class PowerService extends SnapshotService<'power'> {
   ) {
     super(source, stream);
     this.intervalMs = config.polling.powerSeconds * 1000;
+    this.saver.configure(config.polling.batterySaverFactor);
+  }
+
+  /** Every power tick tells the battery saver whether the MacBook is on battery (PRD N7). */
+  protected override onData(data: ModuleData<'power'>): void {
+    this.saver.update(
+      data.device.batteryPct === null ? null : !data.device.onAc,
+    );
   }
 
   protected override summarize(data: ModuleData<'power'>): string {

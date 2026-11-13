@@ -33,7 +33,12 @@ import { FocusCard } from './today/focus-card';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <main class="flex min-h-dvh flex-col gap-12 p-22">
-      <ss-header [header]="store.header()" [now]="now()" [timeZone]="tz()" />
+      <ss-header
+        [header]="store.header()"
+        [now]="now()"
+        [timeZone]="tz()"
+        [batterySaver]="onBattery()"
+      />
       <ss-power-card
         [power]="store.power()"
         [now]="now()"
@@ -69,6 +74,10 @@ export class App implements OnInit {
   protected readonly store = inject(DashboardStore);
   protected readonly now = inject(Clock).now;
   protected readonly tz = computed(() => this.store.uiConfig().timezone);
+  protected readonly onBattery = computed(() => {
+    const device = this.store.power()?.device;
+    return !!device && device.batteryPct !== null && !device.onAc;
+  });
 
   ngOnInit(): void {
     void this.store.loadUiConfig();

@@ -129,6 +129,8 @@ export const configSchema = z.object({
   polling: z
     .object({
       powerSeconds: z.number().positive().default(5),
+      /** On battery, other modules poll this many times slower (PRD N7). 1 turns it off. */
+      batterySaverFactor: z.number().min(1).default(4),
       /** Yasno schedule fetch. Tomorrow's schedule usually appears in the evening. */
       scheduleMinutes: z.number().min(5).default(30),
       pingSeconds: z.number().positive().default(15),

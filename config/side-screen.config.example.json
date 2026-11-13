@@ -59,6 +59,7 @@
   },
   "polling": {
     "powerSeconds": 5,
+    "batterySaverFactor": 4,
     "pingSeconds": 15,
     "scheduleMinutes": 30,
     "devSeconds": 60,
