@@ -36,7 +36,19 @@ import { dayMonth, hhmm, weekday } from '../core/format';
       <div class="font-mono text-display font-semibold" data-testid="clock">
         {{ time() }}
       </div>
-      <div class="text-meta text-muted">{{ weatherLine() }}</div>
+      <div class="text-meta text-muted" data-testid="weather">
+        {{ weatherLine() }}
+        @if (header()?.weather && !header()?.meta?.mock) {
+          <!-- Open-Meteo data is CC BY 4.0: credit it. -->
+          <a
+            class="ml-4 text-label tracking-normal text-dim no-underline hover:text-muted"
+            href="https://open-meteo.com/"
+            target="_blank"
+            rel="noopener"
+            >Open-Meteo</a
+          >
+        }
+      </div>
     </div>
   `,
 })

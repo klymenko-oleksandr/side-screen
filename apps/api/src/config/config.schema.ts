@@ -23,6 +23,9 @@ export const configSchema = z.object({
     .object({
       city: z.string().default('Kyiv'),
       timezone: z.string().default('Europe/Kyiv'),
+      /** Where the weather is for (Open-Meteo). Defaults to central Kyiv. */
+      latitude: z.number().min(-90).max(90).default(50.45),
+      longitude: z.number().min(-180).max(180).default(30.52),
     })
     .prefault({}),
 
@@ -138,7 +141,7 @@ export const configSchema = z.object({
       calendarMinutes: z.number().positive().default(5),
       dtekLiveMinutes: z.number().positive().default(5),
       dtekScheduleHours: z.number().positive().default(6),
-      weatherMinutes: z.number().positive().default(30),
+      weatherMinutes: z.number().positive().default(60),
     })
     .prefault({}),
 });

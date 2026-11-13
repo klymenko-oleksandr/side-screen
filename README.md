@@ -5,7 +5,7 @@ A local dashboard for the portrait HP Z24u G3 beside the MacBook. It shows power
 - PRD: [Side Screen Dashboard — PRD](https://claude.ai/artifact/Rudp7dvhgV6jNeAwkYBqW9)
 - Design: "5 · Mix" artboard on the [design canvas](https://claude.ai/artifact/JawPjSKEPzpyJuGEWgBKRZ)
 
-**Status: Phase 2 + most of Phase 3.** Power, battery, internet, Week off, the calendar, deploys and PRs read real data. Weather is a placeholder and "Three things" is marked WIP until the Reminders helper (phase 5). Set `"mock": true` in the config to run everything on time-driven mock data (handy for UI work).
+**Status: Phase 2 + most of Phase 3.** Power, battery, internet, Week off, the calendar, deploys and PRs read real data. "Three things" is marked WIP until the Reminders helper (phase 5). Set `"mock": true` in the config to run everything on time-driven mock data (handy for UI work).
 
 ## Stack
 

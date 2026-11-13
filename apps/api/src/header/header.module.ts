@@ -7,6 +7,7 @@ import {
   SnapshotSource,
 } from '../snapshot/snapshot';
 import { StreamService } from '../stream/stream.service';
+import { openMeteoUrl, parseOpenMeteo } from './open-meteo';
 
 /** DI token for the header's weather. The clock and date are rendered by the browser. */
 export abstract class HeaderSource extends SnapshotSource<'header'> {}
@@ -30,10 +31,12 @@ export class MockHeaderSource extends HeaderSource {
   }
 }
 
-/** Weather API not picked yet (PRD open question): the header shows the city only. */
+const WEATHER_TIMEOUT_MS = 15_000;
+
+/** Current weather from Open-Meteo for `locale.latitude/longitude`, once an hour by default. */
 @Injectable()
-export class PlaceholderHeaderSource extends HeaderSource {
-  readonly label = 'header';
+export class OpenMeteoHeaderSource extends HeaderSource {
+  readonly label = 'weather';
   readonly mock = false;
 
   constructor(
@@ -43,7 +46,16 @@ export class PlaceholderHeaderSource extends HeaderSource {
   }
 
   async fetch(): Promise<ModuleData<'header'>> {
-    return { city: this.config.locale.city, weather: null };
+    const { city, latitude, longitude, timezone } = this.config.locale;
+    const res = await fetch(openMeteoUrl(latitude, longitude, timezone), {
+      headers: {
+        Accept: 'application/json',
+        'User-Agent': 'SideScreen/1.0 (personal dashboard)',
+      },
+      signal: AbortSignal.timeout(WEATHER_TIMEOUT_MS),
+    });
+    if (!res.ok) throw new Error(`Open-Meteo answered ${res.status}`);
+    return { city, weather: parseOpenMeteo(await res.json()) };
   }
 }
 
@@ -59,6 +71,12 @@ export class HeaderService extends SnapshotService<'header'> {
   ) {
     super(source, stream);
     this.intervalMs = config.polling.weatherMinutes * 60_000;
+  }
+
+  protected override summarize(data: ModuleData<'header'>): string | null {
+    return data.weather
+      ? `weather ${data.city}: ${Math.round(data.weather.tempC)}° ${data.weather.summary}`
+      : null;
   }
 }
 
@@ -77,15 +95,15 @@ export class HeaderController {
   providers: [
     HeaderService,
     MockHeaderSource,
-    PlaceholderHeaderSource,
+    OpenMeteoHeaderSource,
     {
       provide: HeaderSource,
       useFactory: (
         config: SideScreenConfig,
-        real: PlaceholderHeaderSource,
+        real: OpenMeteoHeaderSource,
         mock: MockHeaderSource,
       ) => (config.mock ? mock : real),
-      inject: [SIDE_SCREEN_CONFIG, PlaceholderHeaderSource, MockHeaderSource],
+      inject: [SIDE_SCREEN_CONFIG, OpenMeteoHeaderSource, MockHeaderSource],
     },
   ],
 })
